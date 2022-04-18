@@ -1,11 +1,13 @@
 const faker = require('faker');
 const boom = require('@hapi/boom');
+const pool = require('../libs/postgres.pool');
 
 class ProductsService {
-
-  constructor(){
+  constructor() {
     this.products = [];
     this.generate();
+    this.pool = pool; //creating our pool
+    this.pool.on('error', (err) => console.log(err)); //listening an event error in our pool
   }
 
   generate() {
@@ -24,18 +26,20 @@ class ProductsService {
   async create(data) {
     const newProduct = {
       id: faker.datatype.uuid(),
-      ...data
-    }
+      ...data,
+    };
     this.products.push(newProduct);
     return newProduct;
   }
 
-  find() {
-    return this.products;
+  async find() {
+    const query = 'SELECT * FROM tasks'; //creating our query from our db table
+    const res = await this.pool.query(query); //executing our query
+    return res.rows; //returning our query result
   }
 
   async findOne(id) {
-    const product = this.products.find(item => item.id === id);
+    const product = this.products.find((item) => item.id === id);
     if (!product) {
       throw boom.notFound('product not found');
     }
@@ -46,27 +50,26 @@ class ProductsService {
   }
 
   async update(id, changes) {
-    const index = this.products.findIndex(item => item.id === id);
+    const index = this.products.findIndex((item) => item.id === id);
     if (index === -1) {
       throw boom.notFound('product not found');
     }
     const product = this.products[index];
     this.products[index] = {
       ...product,
-      ...changes
+      ...changes,
     };
     return this.products[index];
   }
 
   async delete(id) {
-    const index = this.products.findIndex(item => item.id === id);
+    const index = this.products.findIndex((item) => item.id === id);
     if (index === -1) {
       throw boom.notFound('product not found');
     }
     this.products.splice(index, 1);
     return { id };
   }
-
 }
 
 module.exports = ProductsService;
